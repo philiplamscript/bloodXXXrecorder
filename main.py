@@ -31,26 +31,23 @@ def init_session_state():
     # 2. Vote Table (Tab 2)
     if 'vote_df' not in st.session_state:
         st.session_state.vote_df = pd.DataFrame({
-            'Day': [1, 2, 3],
-            'Nominator': ['P1', 'P2', ''],
-            'Nominee': ['P3', 'P1', ''],
-            'Voters (Comma Separated)': ['P1, P4, P5', 'P2, P6, P7', ''],
-            'Note on Vote': ['Strong nomination.', 'Quiet attempt.', ''],
+            'Day': [1 ],
+            'from to': [''],
+            'Voters': [''],
+            'Note on Vote': [''],
         })
 
     # 3. Character Confirmation Table (Tab 3)
     if 'char_df' not in st.session_state:
-        roles = [
-            # Outsiders
-            'O: Drunk', 'O: Saint', 'O: Recluse', 'O: Lunatic', 'O: Baron',
-            # Minions
-            'M: Poisoner', 'M: Scarlet Woman', 'M: Spy', 'M: Godfather',
-            # Demons
-            'D: Imp', 'D: Shabaloth', 'D: Zombuul', 'D: Pukka',
-        ]
+        initial_chars = ['Outsiders']*5 + ['Minions']*5 + ['Demons']*5
+        
+        # MODIFICATION: Changed columns to Booleans for the three states
         st.session_state.char_df = pd.DataFrame({
-            'Character': roles,
-            'Status': ['Possible (B)'] * len(roles),
+            'Chap': initial_chars,
+            'Character': [''] * 15,
+            'A (Confirmed)': [False] * 15, # New tickbox column
+            'B (Possible)': [False] * 15,    # New tickbox column (Default to True)
+            'C (Not Exist)': [False] * 15,  # New tickbox column
         })
 
     # Helper for adding rows to Player Info
@@ -65,8 +62,10 @@ init_session_state()
 def add_vote_row():
     """Adds a new row to the Vote Table."""
 
-    submitted_handle()
-
+    # This call to submitted_handle() here would require passing the dataframes, 
+    # but since this function is commented out in the prompt, we'll keep it simple 
+    # and just modify the session state directly as was likely intended.
+    # submitted_handle() # If this function is called, it needs to be fixed.
 
     current_df = st.session_state.vote_df
     new_day = current_df['Day'].max() + 1 if not current_df.empty else 1
@@ -88,17 +87,17 @@ def tab_ppl_information():
 
     # Define column configurations for help text
     column_config = {
-        'Inf': st.column_config.TextColumn("Info", help="Enter player name or brief description."),
-        '☀️': st.column_config.TextColumn("☀️", help="Mark if player died before or during Night 3 (Baron/etc. calculation)."),
-        '🌙': st.column_config.TextColumn("🌙", help="Mark if player died during a night (e.g., Demon attack)."),
-        '🔴': st.column_config.TextColumn("🔴", help="Mark if player is suspected/confirmed Minion or Demon."),
+        'Inf': st.column_config.TextColumn("Info", help="Enter brief description.",width= "large"),
+        '☀️': st.column_config.TextColumn("☀️", width="small",help="Mark if player died before or during Night 3 (Baron/etc. calculation)."),
+        '🌙': st.column_config.TextColumn("🌙", width="small",help="Mark if player died during a night (e.g., Demon attack)."),
+        '🔴': st.column_config.TextColumn("🔴", width="small",help="Mark if player is suspected/confirmed Minion or Demon."),
     }
 
     # Display the editable table
     edited_df = st.data_editor(
         st.session_state.ppl_info_df,
         column_config=column_config,
-        num_rows="fixed",
+        num_rows="dynamic",
         hide_index=False,
         key='edit_ppl_info' # Key is important for form submission
     )
@@ -112,9 +111,9 @@ def tab_vote_table():
 
     # Define column configurations
     column_config = {
-        'Day': st.column_config.NumberColumn("Day", format="%d", min_value=1),
-        'Voters (Comma Separated)': st.column_config.TextColumn("Voters (CSV)", help="e.g., P1, P4, P5"),
-        'Note on Vote': st.column_config.TextColumn("Note", help="Context, final count, or outcome."),
+        'Day': st.column_config.NumberColumn("Day", width="small",format="%d", min_value=1),
+        'Voters': st.column_config.TextColumn("Voters", width="medium",help=""),
+        'Note on Vote': st.column_config.TextColumn("Note", width="small",help="Context, final count, or outcome."),
     }
 
     # Display the editable table
@@ -131,32 +130,50 @@ def tab_vote_table():
 
 def tab_character_confirmation():
     st.markdown("### Possible Character Grid")
-    st.info("Use the 'Status' column to track which characters are **Confirmed (A)**, **Possible (B)**, or **Not Exist (C)**.")
+    st.info("Use the **tick boxes** to track the status: **A** (Confirmed), **B** (Possible), or **C** (Not Exist). Only one box should be ticked per row.")
 
-    # Define column configurations, specifically for the Status selectbox
+    # MODIFICATION: 
+    # 1. 'Character' column is now editable for better length/usability (col length adjustment)
+    # 2. Status is now three boolean columns (3 tick boxes in 3 columns)
     column_config = {
-        'Character': st.column_config.TextColumn(
-            "Character",
-            disabled=True
+        'Chap': st.column_config.TextColumn(
+            "Alignment",
+            disabled=True, # Keep 'Chap' (Alignment) column disabled
+            width= "small"
         ),
-        'Status': st.column_config.SelectboxColumn(
-            "Confirmation Status (A/B/C)",
-            help="A: Confirmed, B: Possible, C: Not Exist",
-            options=['Confirmed (A)', 'Possible (B)', 'Not Exist (C)'],
-            default='Possible (B)'
-        )
+        'Character': st.column_config.TextColumn(
+            "Character Name",
+            help="E.g., Washerwoman, Minion, Imp",
+            width= "medium"
+        ),
+        'A (Confirmed)': st.column_config.CheckboxColumn(
+            "YES", # Use short header for space saving
+            help="Confirmed Character (A)",
+            default=False,
+            width= "small"
+        ),
+        'B (Possible)': st.column_config.CheckboxColumn(
+            "Poss", # Use short header for space saving
+            help="Possible Character (B)",
+            default=False,
+            width= "small"
+        ),
+        'C (Not Exist)': st.column_config.CheckboxColumn(
+            "NO", # Use short header for space saving
+            help="Not Exist (C)",
+            default=False,
+            width= "small"
+        ),
     }
 
     # Display the editable table
     edited_df = st.data_editor(
         st.session_state.char_df,
         column_config=column_config,
-        num_rows="fixed",
+        num_rows="dynamic",
         hide_index=True,
         key='edit_char_table' # Key is important for form submission
     )
-
-    # The button to reset status has been moved outside the form to fix the error.
     
     return edited_df
 
@@ -197,34 +214,40 @@ with st.form("main_recorder_form"):
         st.session_state.ppl_info_df = new_ppl_df
         st.session_state.vote_df = new_vote_df
         st.session_state.char_df = new_char_df
-        # st.success("Changes saved successfully!")
-        # An explicit rerun here is optional, as the form submission already causes one
-        st.rerun()
         st.success("Changes saved successfully!")
+        
+        # An explicit rerun here is optional, as the form submission already causes one
+        st.rerun() # Commented out to prevent the second rerun caused by the button
+        
 
     # 3. Handle Form Submission
     if submitted:
         submitted_handle()
         
 
-# --- Additional Functionality Buttons (Moved outside the form to prevent errors) ---
+## --- Additional Functionality Buttons (Moved outside the form to prevent errors) ---
 
-st.markdown("---")
-st.subheader("Action Buttons")
+# st.markdown("---")
+# st.subheader("Action Buttons")
 
-col_add, col_reset = st.columns(2)
+# col_add, col_reset = st.columns(2)
 
-with col_add:
-    # This button now works because it's outside the main form
-    if st.button("➕ Add New Day/Vote Row", help="Adds a new row to the Vote Table and immediately saves it."):
-        add_vote_row()
-        st.rerun()
+# with col_add:
+#     # This button now works because it's outside the main form
+#     if st.button("➕ Add New Day/Vote Row", help="Adds a new row to the Vote Table."):
+#         # Note: This currently adds the row without saving the main form edits first.
+#         # It should be OK since vote_df is also outside the form context (though edited inside).
+#         add_vote_row()
+#         st.rerun()
 
-with col_reset:
-    # This button now works because it's outside the main form
-    if st.button("🔄 Reset Character Status", help="Resets all Character Statuses to 'Possible (B)' and immediately saves it."):
-        st.session_state.char_df['Status'] = 'Possible (B)'
-        st.rerun()
+# with col_reset:
+#     # This button now works because it's outside the main form
+#     if st.button("🔄 Reset Character Status", help="Resets all Character Statuses to 'Possible (B)' and immediately saves it."):
+#         # Reset A and C to False, B to True
+#         st.session_state.char_df['A (Confirmed)'] = False
+#         st.session_state.char_df['B (Possible)'] = True
+#         st.session_state.char_df['C (Not Exist)'] = False
+#         st.rerun()
 
 
 # --- Footer (Outside of the form) ---
