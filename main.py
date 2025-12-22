@@ -11,7 +11,16 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-
+st.markdown(
+    """
+    <style>
+    section[data-testid="stSidebar"] {
+        width: 50px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 # JavaScript to prevent accidental page refresh/close
 components.html(
     """
@@ -45,6 +54,24 @@ def submitted_handle():
 # Apply initialization
 init_session_state()
 
+# --- Sidebar Navigation ---
+st.sidebar.title("📌 Navigation")
+st.sidebar.markdown("Jump to section:")
+
+# Create navigation links using Markdown anchors
+st.sidebar.markdown("- [Player Status](#player-information-status)")
+st.sidebar.markdown("- [Daily Nomination](#daily-nomination-voting-record)")
+st.sidebar.markdown("- [Note](#note)")
+st.sidebar.markdown("- [Voting History](#record-voting)")
+st.sidebar.markdown("- [Character Confirmation](#outsider)")
+
+st.sidebar.divider()
+
+# --- Global Save Button ---
+st.sidebar.subheader("Controls")
+submitted_sidebar = st.sidebar.button("💾 Commit All Edits & Save", use_container_width=True, key="side_save")
+
+restart_button = st.sidebar.button("Restart simliar setting", use_container_width=True)
 
 
 ## df Tab for record and view
@@ -56,11 +83,13 @@ with tab1:
     
 
 with tab2:
+    st.markdown("### Note")
+    user_input = st.text_area("")
+
     record_vote_df = tab_vote_table()
     submitted = st.button("💾 Commit All Edits & Save")
 
-    st.markdown("### Note")
-    user_input = st.text_area("")
+
 
 
 review_vote_df = vote_display_table()
