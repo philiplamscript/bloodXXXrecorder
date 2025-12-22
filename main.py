@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import datetime
-
+import streamlit.components.v1 as components
+from Function import *
 # --- Configuration and Initialization ---
 
 # Set up the page for mobile responsiveness
@@ -11,247 +12,89 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- Session State Initialization ---
+# JavaScript to prevent accidental page refresh/close
+components.html(
+    """
+    <script>
+    window.addEventListener('beforeunload', function (e) {
+      e.preventDefault();
+      e.returnValue = 'Data will be lost!';
+    });
+    </script>
+    """,
+    height=0,
+)
 
-def init_session_state():
-    """Initializes the required DataFrames in Streamlit's session state."""
+def submitted_handle():
+    # recode vote display result
+    
+    
+    # Only when submitted, we overwrite the session state with the new data
+    st.session_state.ppl_info_df = new_ppl_df
+    # st.session_state.vote_df = record_vote_df
+    st.session_state.char_dict = new_char_dict
 
-    # 1. Player Information Table (Tab 1)
-    if 'ppl_info_df' not in st.session_state:
-        initial_players = 18
-        # Using concise headers for better mobile view in the editor
-        st.session_state.ppl_info_df = pd.DataFrame({
-            'No.': list(range(1, initial_players + 1)),
-            'Inf': [''] * initial_players, # Name/Info
-            '☀️': [''] * initial_players, # Dead Before N3
-            '🌙': [''] * initial_players, # Dead At Night
-            '🔴': [''] * initial_players, # Is Red Side (M/D)
-        }).set_index('No.')
+    st.session_state.vote_display_df = record2dispaly_vote(record_vote_df)
+    # st.write(st.session_state.vote_display_df)
+    st.success("Changes saved successfully!")
+    # An explicit rerun here is optional, as the form submission already causes one
 
-    # 2. Vote Table (Tab 2)
-    if 'vote_df' not in st.session_state:
-        st.session_state.vote_df = pd.DataFrame({
-            'Day': [1 ],
-            'from to': [''],
-            'Voters': [''],
-            'Note on Vote': [''],
-        })
 
-    # 3. Character Confirmation Table (Tab 3)
-    if 'char_df' not in st.session_state:
-        initial_chars = ['Outsiders']*5 + ['Minions']*5 + ['Demons']*5
-        
-        # MODIFICATION: Changed columns to Booleans for the three states
-        st.session_state.char_df = pd.DataFrame({
-            'Chap': initial_chars,
-            'Character': [''] * 15,
-            'A (Confirmed)': [False] * 15, # New tickbox column
-            'B (Possible)': [False] * 15,    # New tickbox column (Default to True)
-            'C (Not Exist)': [False] * 15,  # New tickbox column
-        })
-
-    # Helper for adding rows to Player Info
-    if 'next_player_num' not in st.session_state:
-        st.session_state.next_player_num = len(st.session_state.ppl_info_df) + 1
+# --- Main App Structure ---    
 
 # Apply initialization
 init_session_state()
 
-# --- Utility Functions for Row Management ---
-
-def add_vote_row():
-    """Adds a new row to the Vote Table."""
-
-    # This call to submitted_handle() here would require passing the dataframes, 
-    # but since this function is commented out in the prompt, we'll keep it simple 
-    # and just modify the session state directly as was likely intended.
-    # submitted_handle() # If this function is called, it needs to be fixed.
-
-    current_df = st.session_state.vote_df
-    new_day = current_df['Day'].max() + 1 if not current_df.empty else 1
-    new_row = pd.DataFrame({
-        'Day': [new_day],
-        'Nominator': [''],
-        'Nominee': [''],
-        'Voters (Comma Separated)': [''],
-        'Note on Vote': [''],
-    })
-    st.session_state.vote_df = pd.concat([current_df, new_row], ignore_index=True)
 
 
-# --- UI Functions for Tabs (Now contained within the form) ---
+## df Tab for record and view
+tab1, tab2 = st.columns(2)
 
-def tab_ppl_information():
-    st.markdown("### Player Information & Status")
-    # st.info("Edit the table directly to record names and death/alignment status. 'Inf' is Name/Info. The symbols are for status.")
-
-    # Define column configurations for help text
-    column_config = {
-        'Inf': st.column_config.TextColumn("Info", help="Enter brief description.",width= "large"),
-        '☀️': st.column_config.TextColumn("☀️", width="small",help="Mark if player died before or during Night 3 (Baron/etc. calculation)."),
-        '🌙': st.column_config.TextColumn("🌙", width="small",help="Mark if player died during a night (e.g., Demon attack)."),
-        '🔴': st.column_config.TextColumn("🔴", width="small",help="Mark if player is suspected/confirmed Minion or Demon."),
-    }
-
-    # Display the editable table
-    edited_df = st.data_editor(
-        st.session_state.ppl_info_df,
-        column_config=column_config,
-        num_rows="dynamic",
-        hide_index=False,
-        key='edit_ppl_info' # Key is important for form submission
-    )
-    # The return value (edited_df) is only used/processed when the form submits.
-    return edited_df
-
-
-def tab_vote_table():
-    st.markdown("### Daily Nomination & Voting Record")
-    st.warning("Use player numbers (P1, P2, etc.) or names for consistency.")
-
-    # Define column configurations
-    column_config = {
-        'Day': st.column_config.NumberColumn("Day", width="small",format="%d", min_value=1),
-        'Voters': st.column_config.TextColumn("Voters", width="medium",help=""),
-        'Note on Vote': st.column_config.TextColumn("Note", width="small",help="Context, final count, or outcome."),
-    }
-
-    # Display the editable table
-    edited_df = st.data_editor(
-        st.session_state.vote_df,
-        column_config=column_config,
-        num_rows="dynamic",
-        hide_index=True,
-        key='edit_vote_table' # Key is important for form submission
-    )
-    # The button to add a row has been moved outside the form to fix the error.
-    return edited_df
-
-
-def tab_character_confirmation():
-    st.markdown("### Possible Character Grid")
-    st.info("Use the **tick boxes** to track the status: **A** (Confirmed), **B** (Possible), or **C** (Not Exist). Only one box should be ticked per row.")
-
-    # MODIFICATION: 
-    # 1. 'Character' column is now editable for better length/usability (col length adjustment)
-    # 2. Status is now three boolean columns (3 tick boxes in 3 columns)
-    column_config = {
-        'Chap': st.column_config.TextColumn(
-            "Alignment",
-            disabled=True, # Keep 'Chap' (Alignment) column disabled
-            width= "small"
-        ),
-        'Character': st.column_config.TextColumn(
-            "Character Name",
-            help="E.g., Washerwoman, Minion, Imp",
-            width= "medium"
-        ),
-        'A (Confirmed)': st.column_config.CheckboxColumn(
-            "YES", # Use short header for space saving
-            help="Confirmed Character (A)",
-            default=False,
-            width= "small"
-        ),
-        'B (Possible)': st.column_config.CheckboxColumn(
-            "Poss", # Use short header for space saving
-            help="Possible Character (B)",
-            default=False,
-            width= "small"
-        ),
-        'C (Not Exist)': st.column_config.CheckboxColumn(
-            "NO", # Use short header for space saving
-            help="Not Exist (C)",
-            default=False,
-            width= "small"
-        ),
-    }
-
-    # Display the editable table
-    edited_df = st.data_editor(
-        st.session_state.char_df,
-        column_config=column_config,
-        num_rows="dynamic",
-        hide_index=True,
-        key='edit_char_table' # Key is important for form submission
-    )
+with tab1:
+    # with st.form("review"):
+    new_ppl_df = tab_ppl_information()
     
-    return edited_df
+
+with tab2:
+    record_vote_df = tab_vote_table()
+    submitted = st.button("💾 Commit All Edits & Save")
+
+    st.markdown("### Note")
+    user_input = st.text_area("")
 
 
-# --- Main App Structure ---
+review_vote_df = vote_display_table()
+new_char_dict = tab_character_confirmation()
+# # --- Additional Functionality Buttons (Moved outside the form to prevent errors) ---
 
-st.title("🩸 Blood Clocktower Game Recorder")
-st.caption("A mobile-friendly tool for Storytellers and players to track game state.")
 
-# 1. Start the Form (This blocks reruns from the editors)
-with st.form("main_recorder_form"):
+if submitted:
+    submitted_handle()
+    st.rerun()
+    st.success("Changes saved successfully!")
+
+
+st.write(f"Now is version {st.session_state.version}")
+restart_button = st.button("Restart simliar setting")
+if restart_button:
+    st.session_state.version += 1
+    submitted_handle()
+    ## [update] save to DB
     
-    # Create the tabs within the form
-    tab1, tab2, tab3 = st.tabs([
-        "👥 Player Info",
-        "🗳️ Vote Table",
-        "📜 Character Status"
-    ])
+    # 2. Clear the data frames specifically
+    if 'ppl_info_df' in st.session_state:
+        del st.session_state.ppl_info_df
+    if 'vote_df' in st.session_state:
+        del st.session_state.vote_df
+    if 'vote_display_df' in st.session_state:
+        del st.session_state.vote_display_df
 
-    # Store the results of the data editors (which contain the latest edits)
-    with tab1:
-        new_ppl_df = tab_ppl_information()
-
-    with tab2:
-        new_vote_df = tab_vote_table()
-
-    with tab3:
-        new_char_df = tab_character_confirmation()
-
-    st.markdown("---")
-    
-    # 2. Add the Submit Button
-    # This button submits the form, unblocking the reruns and causing the final rerun
-    submitted = st.form_submit_button("💾 Commit All Edits & Save")
-    
-    def submitted_handle():
-        # Only when submitted, we overwrite the session state with the new data
-        st.session_state.ppl_info_df = new_ppl_df
-        st.session_state.vote_df = new_vote_df
-        st.session_state.char_df = new_char_df
-        st.success("Changes saved successfully!")
-        
-        # An explicit rerun here is optional, as the form submission already causes one
-        st.rerun() # Commented out to prevent the second rerun caused by the button
-        
-
-    # 3. Handle Form Submission
-    if submitted:
-        submitted_handle()
-        
-
-## --- Additional Functionality Buttons (Moved outside the form to prevent errors) ---
-
-# st.markdown("---")
-# st.subheader("Action Buttons")
-
-# col_add, col_reset = st.columns(2)
-
-# with col_add:
-#     # This button now works because it's outside the main form
-#     if st.button("➕ Add New Day/Vote Row", help="Adds a new row to the Vote Table."):
-#         # Note: This currently adds the row without saving the main form edits first.
-#         # It should be OK since vote_df is also outside the form context (though edited inside).
-#         add_vote_row()
-#         st.rerun()
-
-# with col_reset:
-#     # This button now works because it's outside the main form
-#     if st.button("🔄 Reset Character Status", help="Resets all Character Statuses to 'Possible (B)' and immediately saves it."):
-#         # Reset A and C to False, B to True
-#         st.session_state.char_df['A (Confirmed)'] = False
-#         st.session_state.char_df['B (Possible)'] = True
-#         st.session_state.char_df['C (Not Exist)'] = False
-#         st.rerun()
+    init_session_state()
+    st.rerun()
+    st.success("Restarted!")
 
 
-# --- Footer (Outside of the form) ---
 
-st.markdown("---")
-st.markdown(f"**Current Session Time:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-st.markdown("All data is stored in the current session only. Use the 'Commit All Edits & Save' button for tables.")
+
+
+
