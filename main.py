@@ -97,15 +97,19 @@ new_char_dict = tab_character_confirmation()
 # # --- Additional Functionality Buttons (Moved outside the form to prevent errors) ---
 
 
-if submitted:
+if submitted or submitted_sidebar:
     submitted_handle()
+    
     st.rerun()
     st.success("Changes saved successfully!")
+    
 
 
 st.write(f"Now is version {st.session_state.version}")
-restart_button = st.button("Restart simliar setting")
-if restart_button:
+restart_button_2 = st.button("Restart simliar setting")
+
+
+if restart_button or restart_button_2:
     st.session_state.version += 1
     submitted_handle()
     ## [update] save to DB
@@ -119,8 +123,10 @@ if restart_button:
         del st.session_state.vote_display_df
 
     init_session_state()
+    
     st.rerun()
     st.success("Restarted!")
+    
 
 
 
