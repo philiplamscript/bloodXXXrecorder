@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+    background-color: #f1f5f9; /* slate-100 */
+    overflow-x: hidden;
+  }
+
+  /* Force standard box sizing */
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Fix for mobile Safari height issues */
+  body {
+    min-height: -webkit-fill-available;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Ensure a clean, app-like feel on mobile */
+  html, body {
+    @apply antialiased text-slate-900 bg-slate-100;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+
+  #root {
+    height: 100%;
+  }
+
+  /* Custom Scrollbar for the Vote Table */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+
+  /* Remove number input arrows (spinners) */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  /* Fix for consistent input heights */
+  input, select, textarea {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  /* Helper for textareas to look like plain text until focused */
+  .ledger-input {
+    @apply w-full bg-transparent border-none focus:ring-0 transition-all duration-200;
+  }
+
+  /* Hide scrollbars but keep functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
